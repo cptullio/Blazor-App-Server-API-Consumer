@@ -1,54 +1,55 @@
+using System.Threading.Tasks;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MyAPP.API.Features.Commands;
 using MyAPP.API.Services;
 
 
 namespace MyAPP.API.Controllers
 {
-    
+
     [Route("api/account")]
     public class AccountController : ControllerBase
     {
-        
-        private ITokenService tokenService;
-        public AccountController([FromServices]ITokenService _tokenService)
+        private readonly IMediator _mediator;
+
+        public AccountController(IMediator mediator)
         {
-            tokenService = _tokenService;
+            _mediator = mediator;
         }
+
 
         [HttpPost]
         [Route("login")]
         [AllowAnonymous]
-        public ActionResult Login([FromBody]string userName){
-            
-            var role = UserService.GetRoleByUserName(userName);
-
-            if (string.IsNullOrEmpty(role))
-                return NotFound(new {message = "User Not Found"});
-            
-            var token = tokenService.GenerateToken(userName,role);
-            return Ok(new {
-                user = userName,
-                token = token
-            });
-
+        public async Task<ActionResult> Login([FromBody]AuthenticationRequest request)
+        {
+            var response = await _mediator.Send(request);
+            if (response == null)
+                return NotFound(new { message = "Invalid Login" });
+            return Ok(response);
         }
 
         [HttpGet]
         [Route("admin")]
-        [Authorize(Roles="admin")]        
-        public ActionResult CallAdmin(){
-            return Ok(new {
+        [Authorize(Roles = "admin")]
+        public ActionResult CallAdmin()
+        {
+            return Ok(new
+            {
                 user = User.Identity.Name
             });
 
         }
-       
+
         [HttpGet]
         [Route("user")]
-        [Authorize(Roles="user,admin")]        
-        public ActionResult CallUser(){
-            return Ok(new {
+        [Authorize(Roles = "user,admin")]
+        public ActionResult CallUser()
+        {
+            return Ok(new
+            {
                 user = User.Identity.Name
             });
 
